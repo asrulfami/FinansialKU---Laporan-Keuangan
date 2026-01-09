@@ -12,8 +12,11 @@ class DashboardController extends Controller
     {
         $userId = Auth::id();
 
+        // Buat Query Builder dasar
+        $query = Transaction::where('user_id', $userId);
+
         // Ambil semua transaksi user
-        $transactions = Transaction::where('user_id', $userId)->get();
+        $transactions = (clone $query)->get();
 
         // Hitung Total Pemasukan (type = 'in')
         $totalPemasukan = $transactions->where('type', 'in')->sum('amount');
@@ -25,7 +28,7 @@ class DashboardController extends Controller
         $saldo = $totalPemasukan - $totalPengeluaran;
 
         // Ambil 5 transaksi terbaru
-        $recentTransactions = Transaction::where('user_id', $userId)
+        $recentTransactions = (clone $query)
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->take(5)

@@ -5,15 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Laporan Keuangan</title>
     @vite('resources/css/app.css')
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-20px); }
             100% { transform: translateY(0px); }
         }
+        @keyframes moveHorizontal {
+            0% { transform: translateX(-150px) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateX(calc(100% + 150px)) rotate(360deg); opacity: 0; }
+        }
+        @keyframes moveVertical {
+            0% { transform: translateY(-150px) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(calc(100% + 150px)) rotate(360deg); opacity: 0; }
+        }
         .animate-float {
             animation: float 6s ease-in-out infinite;
         }
+        .animate-move-h { animation: moveHorizontal 15s linear infinite; }
+        .animate-move-v { animation: moveVertical 15s linear infinite; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -41,15 +57,23 @@
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto p-8 relative">
             <!-- Background Decoration -->
-            <div class="absolute top-0 right-0 -mt-10 -mr-10 opacity-10 pointer-events-none z-0">
-                <svg width="400" height="400" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="text-blue-500 fill-current animate-float">
-                    <path d="M45.7,-76.3C58.9,-69.3,69.1,-55.8,76.3,-41.3C83.5,-26.9,87.7,-11.5,85.8,3.1C83.9,17.7,75.9,31.5,66.3,43.6C56.7,55.7,45.5,66.1,32.6,72.6C19.7,79.1,5.1,81.7,-8.6,79.8C-22.3,77.9,-35.1,71.5,-46.8,63.1C-58.5,54.7,-69.1,44.3,-76.3,31.7C-83.5,19.1,-87.3,4.3,-84.8,-9.4C-82.3,-23.1,-73.5,-35.7,-62.9,-45.3C-52.3,-54.9,-39.9,-61.5,-27.4,-68.8C-14.9,-76.1,-2.3,-84.1,11.7,-82.1C25.7,-80.1,51.4,-68.1,45.7,-76.3Z" transform="translate(100 100)" />
-                </svg>
-            </div>
-            <div class="absolute bottom-0 left-0 -mb-20 -ml-20 opacity-5 pointer-events-none z-0">
-                <svg width="500" height="500" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="text-green-500 fill-current animate-float" style="animation-delay: 3s;">
-                    <path d="M41.3,-72.8C53.5,-64.4,63.4,-53.2,71.3,-40.8C79.2,-28.4,85.1,-14.8,83.9,-1.8C82.7,11.2,74.4,23.6,65.1,34.8C55.8,46,45.5,56,33.9,62.9C22.3,69.8,9.4,73.6,-2.8,78.5C-15,83.3,-26.5,89.2,-36.9,83.8C-47.3,78.4,-56.6,61.7,-64.3,46.8C-72,31.9,-78.1,18.8,-77.8,5.9C-77.5,-7,-70.8,-19.7,-61.8,-30.3C-52.8,-40.9,-41.5,-49.4,-30.3,-58.3C-19.1,-67.2,-8,-76.5,4.8,-84.8C17.6,-93.1,35.2,-100.4,41.3,-72.8Z" transform="translate(100 100)" />
-                </svg>
+            <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                <!-- Koin (Kiri ke Kanan) -->
+                <div class="absolute top-1/4 left-0 animate-move-h">
+                    <svg class="w-32 h-32 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.736 6.979C9.208 6.193 9.912 6 10.5 6c1.414 0 2.5 1.086 2.5 2.5 0 1.414-1.086 2.5-2.5 2.5h-.5a1 1 0 110-2h.5c.276 0 .5-.224.5-.5s-.224-.5-.5-.5c-.588 0-1.292.193-1.764.979a1 1 0 01-1.714-1.029zm1.528 8.042c-.472.786-1.176.979-1.764.979-.276 0-.5-.224-.5-.5s.224-.5.5-.5h.5c1.414 0 2.5-1.086 2.5-2.5 0-1.414-1.086-2.5-2.5-2.5a1 1 0 010-2c.588 0 1.292.193 1.764.979a1 1 0 111.714 1.029c-.472-.786-1.176-.979-1.764-.979-.276 0-.5.224-.5.5s.224.5.5.5h-.5c-1.414 0-2.5 1.086-2.5 2.5 0 1.414 1.086 2.5 2.5 2.5h.5a1 1 0 010 2z" clip-rule="evenodd"/></svg>
+                </div>
+                <!-- Grafik (Atas ke Bawah) -->
+                <div class="absolute top-0 right-1/4 animate-move-v" style="animation-delay: 5s;">
+                    <svg class="w-40 h-40 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+                </div>
+                <!-- Dompet (Kiri ke Kanan, delay) -->
+                <div class="absolute bottom-1/3 left-0 animate-move-h" style="animation-delay: 7s;">
+                    <svg class="w-24 h-24 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" /><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" /></svg>
+                </div>
+                 <!-- Uang (Atas ke Bawah, delay) -->
+                <div class="absolute top-0 left-1/3 animate-move-v" style="animation-delay: 2s;">
+                    <svg class="w-28 h-28 text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05 1.18 1.91 2.53 1.91 1.29 0 2.13-.72 2.13-1.71 0-1.12-.88-1.58-2.33-2.08l-.9-.33c-2.02-.7-3.27-1.7-3.27-3.56 0-1.87 1.45-3.09 3.14-3.47V3h2.67v1.93c1.5.25 2.9 1.25 2.99 3.12h-1.92c-.13-.91-1.13-1.56-2.37-1.56-1.16 0-1.92.64-1.92 1.58 0 1.1.81 1.51 2.11 1.96l.9.32c2.2.78 3.52 1.82 3.52 3.71 0 2.05-1.55 3.32-3.29 3.63z"/></svg>
+                </div>
             </div>
 
             <div class="relative z-10">
@@ -98,12 +122,38 @@
             </div>
 
             <!-- Placeholder for Chart or Recent Transactions -->
-            <div class="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center justify-center text-center h-64">
-                <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                <p class="text-gray-500">Grafik aktivitas keuangan akan muncul di sini.</p>
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Perbandingan Pemasukan vs Pengeluaran</h3>
+                <div class="h-64">
+                    <canvas id="incomeExpenseChart"></canvas>
+                </div>
             </div>
             </div>
         </main>
     </div>
+
+    <script>
+        const ctx = document.getElementById('incomeExpenseChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pemasukan', 'Pengeluaran'],
+                datasets: [{
+                    data: [{{ $total_pemasukan ?? 0 }}, {{ $total_pengeluaran ?? 0 }}],
+                    backgroundColor: ['#10B981', '#EF4444'], // Hijau (Green-500) & Merah (Red-500)
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

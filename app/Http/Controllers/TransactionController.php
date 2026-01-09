@@ -10,6 +10,11 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date'   => 'nullable|date' . ($request->filled('start_date') ? '|after_or_equal:start_date' : ''),
+        ]);
+
         $user = auth()->user();
         $userBalances = [];
         $viewingUser = null;
@@ -17,6 +22,12 @@ class TransactionController extends Controller
         $chartDates = [];
         $chartIncome = [];
         $chartExpense = [];
+
+        // Parameter Sorting Default
+        $sortBy = $request->get('sort_by', 'date');
+        $sortOrder = $request->get('sort_order', 'desc');
+        if (!in_array($sortBy, ['date', 'amount'])) $sortBy = 'date';
+        if (!in_array($sortOrder, ['asc', 'desc'])) $sortOrder = 'desc';
 
         if ($user && $user->role === 'admin') {
             // Cek apakah admin sedang melihat detail user tertentu
@@ -30,6 +41,9 @@ class TransactionController extends Controller
                 ? Transaction::where('user_id', $viewingUser->id) 
                 : Transaction::whereHas('user', function($q) { $q->where('role', '!=', 'admin'); });
 
+            // Ambil daftar kategori unik untuk dropdown filter
+            $categories = (clone $query)->select('category')->distinct()->pluck('category')->filter()->sort();
+
             // Filter Tanggal
             if ($request->filled('start_date')) {
                 $query->whereDate('date', '>=', $request->start_date);
@@ -38,24 +52,29 @@ class TransactionController extends Controller
                 $query->whereDate('date', '<=', $request->end_date);
             }
 
+            // Filter Pencarian (Search)
+            if ($request->filled('search')) {
+                $query->where('description', 'like', '%' . $request->search . '%');
+            }
+
+            // Filter Kategori
+            if ($request->filled('category')) {
+                $query->where('category', $request->category);
+            }
+
+            // Filter Jumlah (Amount)
+            if ($request->filled('min_amount')) {
+                $query->where('amount', '>=', $request->min_amount);
+            }
+            if ($request->filled('max_amount')) {
+                $query->where('amount', '<=', $request->max_amount);
+            }
+
             $totalIn = (clone $query)->where('type', 'in')->sum('amount');
             $totalOut = (clone $query)->where('type', 'out')->sum('amount');
             $currentBalance = $totalIn - $totalOut;
 
-            // Ambil data untuk grafik (Group by Date)
-            $chartData = (clone $query)
-                ->selectRaw('DATE(date) as date, type, SUM(amount) as total')
-                ->groupBy('date', 'type')
-                ->orderBy('date', 'asc')
-                ->get();
-            
-            $chartDates = $chartData->pluck('date')->unique()->sort()->values();
-            foreach ($chartDates as $date) {
-                $chartIncome[] = $chartData->where('date', $date)->where('type', 'in')->sum('total');
-                $chartExpense[] = $chartData->where('date', $date)->where('type', 'out')->sum('total');
-            }
-
-            $transactions = $query->with('user')->orderBy('date', 'desc')->paginate(10)->withQueryString();
+            $transactions = (clone $query)->with('user')->orderBy($sortBy, $sortOrder)->paginate(10)->withQueryString();
 
             $userBalances = User::where('role', '!=', 'admin')
                 ->withSum(['transactions as income' => function($query) {
@@ -68,6 +87,9 @@ class TransactionController extends Controller
         } else {
             $query = Transaction::where('user_id', $user->id);
 
+            // Ambil daftar kategori unik untuk dropdown filter
+            $categories = (clone $query)->select('category')->distinct()->pluck('category')->filter()->sort();
+
             if ($request->filled('start_date')) {
                 $query->whereDate('date', '>=', $request->start_date);
             }
@@ -75,26 +97,44 @@ class TransactionController extends Controller
                 $query->whereDate('date', '<=', $request->end_date);
             }
 
-            $transactions = (clone $query)->orderBy('date','desc')->paginate(10)->withQueryString();
+            // Filter Pencarian (Search)
+            if ($request->filled('search')) {
+                $query->where('description', 'like', '%' . $request->search . '%');
+            }
+
+            // Filter Kategori
+            if ($request->filled('category')) {
+                $query->where('category', $request->category);
+            }
+
+            // Filter Jumlah (Amount)
+            if ($request->filled('min_amount')) {
+                $query->where('amount', '>=', $request->min_amount);
+            }
+            if ($request->filled('max_amount')) {
+                $query->where('amount', '<=', $request->max_amount);
+            }
+
+            $transactions = (clone $query)->orderBy($sortBy, $sortOrder)->paginate(10)->withQueryString();
             $totalIn = (clone $query)->where('type','in')->sum('amount');
             $totalOut = (clone $query)->where('type','out')->sum('amount');
             $currentBalance = $totalIn - $totalOut;
-
-            // Ambil data untuk grafik (Group by Date)
-            $chartData = (clone $query)
-                ->selectRaw('DATE(date) as date, type, SUM(amount) as total')
-                ->groupBy('date', 'type')
-                ->orderBy('date', 'asc')
-                ->get();
-            
-            $chartDates = $chartData->pluck('date')->unique()->sort()->values();
-            foreach ($chartDates as $date) {
-                $chartIncome[] = $chartData->where('date', $date)->where('type', 'in')->sum('total');
-                $chartExpense[] = $chartData->where('date', $date)->where('type', 'out')->sum('total');
-            }
         }
 
-        return view('transactions.index', compact('transactions', 'totalIn', 'totalOut', 'currentBalance', 'userBalances', 'viewingUser', 'chartDates', 'chartIncome', 'chartExpense'));
+        // Logika Line Chart (Tren) dikembalikan ke Controller
+        $chartData = (clone $query)
+            ->selectRaw('DATE(date) as date, type, SUM(amount) as total')
+            ->groupBy('date', 'type')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        $chartDates = $chartData->pluck('date')->unique()->sort()->values();
+        foreach ($chartDates as $date) {
+            $chartIncome[] = $chartData->where('date', $date)->where('type', 'in')->sum('total');
+            $chartExpense[] = $chartData->where('date', $date)->where('type', 'out')->sum('total');
+        }
+
+        return view('transactions.index', compact('transactions', 'totalIn', 'totalOut', 'currentBalance', 'userBalances', 'viewingUser', 'chartDates', 'chartIncome', 'chartExpense', 'categories'));
     }
 
     public function create()
@@ -106,6 +146,7 @@ class TransactionController extends Controller
     {
         $data = $request->validate([
             'description' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:100', // Menambahkan validasi kategori
             'amount' => 'required|numeric',
             'type' => 'required|in:in,out',
             'date' => 'nullable|date',
@@ -137,6 +178,17 @@ class TransactionController extends Controller
             abort(403);
         }
 
+        if (request()->ajax()) {
+            return response()->json([
+                'date' => $transaction->date ? $transaction->date->format('d M Y') : '-',
+                'category' => $transaction->category ?? '-',
+                'amount' => number_format($transaction->amount, 2, ',', '.'),
+                'type' => $transaction->type == 'in' ? 'Pemasukan' : 'Pengeluaran',
+                'description' => $transaction->description ?? '-',
+                'user_name' => $transaction->user->name ?? null
+            ]);
+        }
+
         return view('transactions.show', compact('transaction'));
     }
 
@@ -154,6 +206,7 @@ class TransactionController extends Controller
     {
         $data = $request->validate([
             'description' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:100', // Menambahkan validasi kategori
             'amount' => 'required|numeric',
             'type' => 'required|in:in,out',
             'date' => 'nullable|date',
